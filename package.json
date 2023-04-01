@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "aegir build",
+    "lint": "aegir lint",
     "test": "aegir test"
   },
   "keywords": [

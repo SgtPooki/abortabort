@@ -2,14 +2,15 @@
 export interface AbortAbortOptions {
   /**
    * The number of milliseconds to wait before triggering the AbortSignal.
+   *
    * @see https://nodejs.org/api/globals.html#static-method-abortsignaltimeoutdelay
    */
-  timeout?: number;
+  timeout?: number
 
   /**
    * An array of AbortAbort instances that will be aborted if this instance is aborted.
    */
-  dependants?: InstanceType<typeof AbortAbort>[];
+  dependants?: Array<InstanceType<typeof AbortAbort>>
 
   /**
    * A unique identifier for this AbortAbort instance.
@@ -44,76 +45,76 @@ const defaultOptions: AbortAbortOptions = {
  *
  */
 export default class AbortAbort {
-  private readonly _dependants: AbortAbort[] = [];
-  private readonly abortController: AbortController;
+  private readonly _dependants: AbortAbort[] = []
+  private readonly abortController: AbortController
 
-  constructor(protected readonly options: AbortAbortOptions = defaultOptions) {
-    this.abortController = new AbortController();
+  constructor (protected readonly options: AbortAbortOptions = defaultOptions) {
+    this.abortController = new AbortController()
 
     if (this.options?.dependants != null && this.options.dependants.length > 0) {
-      this.options.dependants.forEach((dependant) => this.addDependant(dependant));
+      this.options.dependants.forEach((dependant) => { this.addDependant(dependant) })
     }
-    this.abortAllDependencies = this.abortAllDependencies.bind(this);
-    this.updateOnDependantAbort = this.updateOnDependantAbort.bind(this);
+    this.abortAllDependencies = this.abortAllDependencies.bind(this)
+    this.updateOnDependantAbort = this.updateOnDependantAbort.bind(this)
 
     this.signal.addEventListener('abort', this.abortAllDependencies, { once: true })
 
     if (options?.timeout != null) {
       setTimeout(() => {
-        this.abort(new Error(`${this.toString()} timeout of ${options.timeout}ms exceeded`));
-      }, options.timeout);
+        this.abort(new Error(`${this.toString()} timeout of ${options.timeout}ms exceeded`))
+      }, options.timeout)
     }
   }
 
-  abort(reason: unknown = new Error('Unknown AbortAbort reason')): void {
+  abort (reason: unknown = new Error('Unknown AbortAbort reason')): void {
     console.log(`${this.toString()} is aborting`, reason)
-    this.abortController.abort(reason);
+    this.abortController.abort(reason)
   }
 
-  get aborted(): boolean {
-    return this.signal.aborted;
+  get aborted (): boolean {
+    return this.signal.aborted
   }
 
-  get signal(): AbortSignal {
-    return this.abortController.signal;
+  get signal (): AbortSignal {
+    return this.abortController.signal
   }
 
-  toString(): string {
-    return this.options?.id ? `AbortAbort(${this.options.id})` : 'AbortAbort';
+  toString (): string {
+    return this.options?.id ? `AbortAbort(${this.options.id})` : 'AbortAbort'
   }
 
-  abortAllDependencies() {
-    console.log(`${this.toString()} abortAllDependencies`);
+  abortAllDependencies () {
+    console.log(`${this.toString()} abortAllDependencies`)
     this._dependants.forEach((dep: AbortAbort): void => {
-      if (dep.aborted === true) {
+      if (dep.aborted) {
         return
       }
       const dependantError = new Error(`${dep.toString()} relies on another ${this.toString()} that was aborted`)
-      dep.abort(dependantError);
-    });
+      dep.abort(dependantError)
+    })
   }
 
   /**
    * @param dependant - An AbortAbort instance that will be aborted if this instance is aborted.
    */
-  addDependant(dependant: AbortAbort): void {
-    if (this.signal.aborted === true) {
-      dependant.abort(new Error(`${dependant.toString()} could not be added as a dependency to an already aborted ${this.toString()} instance`));
+  addDependant (dependant: AbortAbort): void {
+    if (this.signal.aborted) {
+      dependant.abort(new Error(`${dependant.toString()} could not be added as a dependency to an already aborted ${this.toString()} instance`))
       return
     }
-    this._dependants.push(dependant);
+    this._dependants.push(dependant)
 
     dependant.signal.addEventListener('abort', () => {
-      console.log(`Dependant ${dependant.toString()} aborted`);
+      console.log(`Dependant ${dependant.toString()} aborted`)
       this.updateOnDependantAbort(dependant)
-    }, { once: true });
+    }, { once: true })
   }
 
-  get successfulDependants(): number {
-    return this._dependants.filter((dependant) => dependant.aborted === false).length;
+  get successfulDependants (): number {
+    return this._dependants.filter((dependant) => !dependant.aborted).length
   }
 
-  updateOnDependantAbort(dependant: AbortAbort) {
+  updateOnDependantAbort (dependant: AbortAbort) {
     const successRatio = this.calculateSuccessRatio()
     if (this.options.maximumFailedDependants && this._dependants.length - this.successfulDependants >= this.options.maximumFailedDependants) {
       this.abort(new Error(`${this.toString()} failed due to maximum failed dependants of ${this.options.maximumFailedDependants}`))
@@ -123,12 +124,11 @@ export default class AbortAbort {
     }
   }
 
-  calculateSuccessRatio() {
-    const successfulDependants = this.successfulDependants;
-    const totalDependants = this._dependants.length;
-    const successRatio = successfulDependants / totalDependants;
+  calculateSuccessRatio () {
+    const successfulDependants = this.successfulDependants
+    const totalDependants = this._dependants.length
+    const successRatio = successfulDependants / totalDependants
     console.log(`Success ratio: ${successRatio} (${successfulDependants} / ${totalDependants})`)
-    return successRatio;
+    return successRatio
   }
-
 }
