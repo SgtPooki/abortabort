@@ -41,12 +41,17 @@ const defaultOptions: AbortAbortOptions = {
  * A class that handles AbortController nesting.
  *
  * Features:
- * * Any dependants of an AbortAbort class are aborted when it is aborted.
- * * An AbortAbort class can see how many of its dependants have been aborted
- * * An attempt to add a dependant to an already aborted AbortAbort class will immediately abort the dependant
- * * An AbortAbort instance will abort if a certain percentage of its dependants have been aborted
+ * * Any dependants of an AbortAbort are aborted when it is aborted.
+ * * An AbortAbort can see how many of its dependants have been aborted
+ * * An attempt to add a dependant to an already aborted AbortAbort will immediately abort the dependant
+ * * An AbortAbort can abort if a certain percentage of its dependants have been aborted
+ * * An AbortAbort can abort if a certain number of its dependants have been aborted
+ * * An AbortAbort can be added to another as a dependant at any time
  *
  * TODO features:
+ * * Support calculation of success ratio based on a custom function
+ * * Use all nested dependants in calculation of success ratio
+ * * Support configuration of successRatioLimit (only direct children? or all?)
  *
  */
 export default class AbortAbort {
