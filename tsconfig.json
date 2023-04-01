@@ -11,7 +11,7 @@
 
     "ignoreDeprecations": "5.0", // needed due to deprecated usage in tsconfig.aegir.json
     // "allowImportingTsExtensions": true,
-    "emitDeclarationOnly": false,
+    "emitDeclarationOnly": false
   },
   "include": [
     "src",

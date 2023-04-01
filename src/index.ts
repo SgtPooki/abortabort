@@ -1,3 +1,7 @@
+import debug from 'debug'
+
+const log = debug('abortabort')
+const trace = log.extend('trace')
 
 export interface AbortAbortOptions {
   /**
@@ -30,7 +34,8 @@ export interface AbortAbortOptions {
 }
 
 const defaultOptions: AbortAbortOptions = {
-  dependants: []
+  dependants: [],
+  maximumFailedDependants: Infinity
 }
 /**
  * A class that handles AbortController nesting.
@@ -67,7 +72,7 @@ export default class AbortAbort {
   }
 
   abort (reason: unknown = new Error('Unknown AbortAbort reason')): void {
-    console.log(`${this.toString()} is aborting`, reason)
+    trace(`${this.toString()} is aborting`, reason)
     this.abortController.abort(reason)
   }
 
@@ -80,11 +85,15 @@ export default class AbortAbort {
   }
 
   toString (): string {
-    return this.options?.id ? `AbortAbort(${this.options.id})` : 'AbortAbort'
+    return this.options?.id != null ? `AbortAbort(${this.options.id})` : 'AbortAbort'
   }
 
-  abortAllDependencies () {
-    console.log(`${this.toString()} abortAllDependencies`)
+  /**
+   * Abort all dependants of this instance.
+   * You can call this method directly in order to keep this instance alive but abort all of its dependants.
+   */
+  public abortAllDependencies (): void {
+    trace(`${this.toString()} abortAllDependencies`)
     this._dependants.forEach((dep: AbortAbort): void => {
       if (dep.aborted) {
         return
@@ -97,7 +106,7 @@ export default class AbortAbort {
   /**
    * @param dependant - An AbortAbort instance that will be aborted if this instance is aborted.
    */
-  addDependant (dependant: AbortAbort): void {
+  public addDependant (dependant: AbortAbort): void {
     if (this.signal.aborted) {
       dependant.abort(new Error(`${dependant.toString()} could not be added as a dependency to an already aborted ${this.toString()} instance`))
       return
@@ -105,7 +114,7 @@ export default class AbortAbort {
     this._dependants.push(dependant)
 
     dependant.signal.addEventListener('abort', () => {
-      console.log(`Dependant ${dependant.toString()} aborted`)
+      trace(`Dependant ${dependant.toString()} aborted`)
       this.updateOnDependantAbort(dependant)
     }, { once: true })
   }
@@ -114,21 +123,38 @@ export default class AbortAbort {
     return this._dependants.filter((dependant) => !dependant.aborted).length
   }
 
-  updateOnDependantAbort (dependant: AbortAbort) {
-    const successRatio = this.calculateSuccessRatio()
-    if (this.options.maximumFailedDependants && this._dependants.length - this.successfulDependants >= this.options.maximumFailedDependants) {
-      this.abort(new Error(`${this.toString()} failed due to maximum failed dependants of ${this.options.maximumFailedDependants}`))
-    }
-    if (this.options.successRatioLimit && successRatio < this.options.successRatioLimit) {
-      this.abort(new Error(`${this.toString()} failed due to dependant success ratio of ${successRatio}`))
-    }
-  }
-
-  calculateSuccessRatio () {
+  public calculateSuccessRatio (): number {
     const successfulDependants = this.successfulDependants
     const totalDependants = this._dependants.length
     const successRatio = successfulDependants / totalDependants
-    console.log(`Success ratio: ${successRatio} (${successfulDependants} / ${totalDependants})`)
+    trace(`Success ratio: ${successRatio} (${successfulDependants} / ${totalDependants})`)
     return successRatio
+  }
+
+  private updateOnDependantAbort (dependant: AbortAbort): void {
+    this.checkMaximumFailedDependants()
+    this.checkSuccessRatioLimit()
+  }
+
+  private checkMaximumFailedDependants (): void {
+    const maxFailedDeps = this.options.maximumFailedDependants
+    if (maxFailedDeps == null) {
+      return
+    }
+    const failedDependants = this._dependants.length - this.successfulDependants
+    if (failedDependants >= maxFailedDeps) {
+      this.abort(new Error(`${this.toString()} violated maximumFailedDependants setting: Expected max of '${maxFailedDeps}', received '${failedDependants}'`))
+    }
+  }
+
+  private checkSuccessRatioLimit (): void {
+    const successRatioLimit = this.options.successRatioLimit
+    if (successRatioLimit == null) {
+      return
+    }
+    const successRatio = this.calculateSuccessRatio()
+    if (successRatio < successRatioLimit) {
+      this.abort(new Error(`${this.toString()} violated successRatioLimit. Expected at least '${successRatioLimit}'; received '${successRatio}'`))
+    }
   }
 }
