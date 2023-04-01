@@ -21,6 +21,11 @@ export interface AbortAbortOptions {
    * Upon a dependant's abort, the success ratio is calculated and if it is less than this value, this instance will abort.
    */
   successRatioLimit?: number
+
+  /**
+   * The maximum number of dependants that can fail before this instance aborts.
+   */
+  maximumFailedDependants?: number
 }
 
 const defaultOptions: AbortAbortOptions = {
@@ -48,6 +53,8 @@ export default class AbortAbort {
     if (this.options?.dependants != null && this.options.dependants.length > 0) {
       this.options.dependants.forEach((dependant) => this.addDependant(dependant));
     }
+    this.abortAllDependencies = this.abortAllDependencies.bind(this);
+    this.updateOnDependantAbort = this.updateOnDependantAbort.bind(this);
 
     this.signal.addEventListener('abort', this.abortAllDependencies, { once: true })
 
@@ -77,9 +84,12 @@ export default class AbortAbort {
 
   abortAllDependencies() {
     console.log(`${this.toString()} abortAllDependencies`);
-    this._dependants.forEach((child: AbortAbort): void => {
-      const dependantError = new Error(`${child.toString()} relies on another ${this.toString()} that was aborted`)
-      child.abort(dependantError);
+    this._dependants.forEach((dep: AbortAbort): void => {
+      if (dep.aborted === true) {
+        return
+      }
+      const dependantError = new Error(`${dep.toString()} relies on another ${this.toString()} that was aborted`)
+      dep.abort(dependantError);
     });
   }
 
@@ -94,20 +104,27 @@ export default class AbortAbort {
     this._dependants.push(dependant);
 
     dependant.signal.addEventListener('abort', () => {
+      console.log(`Dependant ${dependant.toString()} aborted`);
       this.updateOnDependantAbort(dependant)
     }, { once: true });
   }
 
+  get successfulDependants(): number {
+    return this._dependants.filter((dependant) => dependant.aborted === false).length;
+  }
+
   updateOnDependantAbort(dependant: AbortAbort) {
-    console.log(`Dependant ${dependant.toString()} aborted`);
     const successRatio = this.calculateSuccessRatio()
+    if (this.options.maximumFailedDependants && this._dependants.length - this.successfulDependants >= this.options.maximumFailedDependants) {
+      this.abort(new Error(`${this.toString()} failed due to maximum failed dependants of ${this.options.maximumFailedDependants}`))
+    }
     if (this.options.successRatioLimit && successRatio < this.options.successRatioLimit) {
       this.abort(new Error(`${this.toString()} failed due to dependant success ratio of ${successRatio}`))
     }
   }
 
   calculateSuccessRatio() {
-    const successfulDependants = this._dependants.filter((dependant) => dependant.aborted === false).length;
+    const successfulDependants = this.successfulDependants;
     const totalDependants = this._dependants.length;
     const successRatio = successfulDependants / totalDependants;
     console.log(`Success ratio: ${successRatio} (${successfulDependants} / ${totalDependants})`)
