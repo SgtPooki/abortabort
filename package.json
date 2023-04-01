@@ -2,22 +2,52 @@
   "name": "abortabort",
   "version": "0.0.1",
   "description": "Simple AbortController wrapper that makes it easy to nest signals",
-  "main": "src/index.ts",
+  "author": "SgtPooki",
+  "license": "Apache-2.0 OR MIT",
+  "homepage": "https://github.com/SgtPooki/abortabort#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SgtPooki/abortabort.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SgtPooki/abortabort/issues"
+  },
+  "keywords": [
+    "AbortController",
+    "AbortSignal",
+    "Cancel",
+    "Promise",
+    "interrupt"
+  ],
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
   "type": "module",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "src",
+    "dist",
+    "!dist/test",
+    "!**/*.tsbuildinfo"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "eslintConfig": {
+    "extends": "ipfs",
+    "parserOptions": {
+      "sourceType": "module"
+    }
+  },
   "scripts": {
     "build": "aegir build",
     "lint": "aegir lint",
     "test": "aegir test"
   },
-  "keywords": [
-    "AbortController",
-    "AbortSignal",
-    "Promise",
-    "Cancel",
-    "interrupt"
-  ],
-  "author": "SgtPooki",
-  "license": "MIT",
   "devDependencies": {
     "aegir": "^38.1.8",
     "debug": "^4.3.4",
