@@ -1,6 +1,6 @@
 {
   "name": "abortabort",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Simple AbortController wrapper that makes it easy to nest signals",
   "author": "SgtPooki",
   "license": "Apache-2.0 OR MIT",
