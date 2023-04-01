@@ -1,0 +1,21 @@
+{
+  "extends": "./node_modules/aegir/src/config/tsconfig.aegir.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "allowJs": true,
+    "module": "es2022",
+    "target": "es2022",
+    "jsx": "react",
+    "lib": ["WebWorker", "ES6", "DOM"],
+    "moduleResolution": "nodenext",
+
+    "ignoreDeprecations": "5.0", // needed due to deprecated usage in tsconfig.aegir.json
+    // "allowImportingTsExtensions": true,
+    "emitDeclarationOnly": false,
+  },
+  "include": [
+    "src",
+    "test",
+    "types/svg.d.ts"
+  ]
+}
