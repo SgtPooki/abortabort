@@ -46,12 +46,14 @@
   "scripts": {
     "build": "aegir build",
     "lint": "aegir lint",
-    "test": "aegir test"
+    "test": "aegir test && npm run test:cov",
+    "test:cov": "npm run build && c8 -r lcovonly mocha --require source-map-support/register --reporter=dot --timeout=10000 --bail --exit --recursive dist/test/**/*.spec.js"
   },
   "devDependencies": {
-    "aegir": "^38.1.8",
+    "aegir": "^41.0.5",
+    "c8": "^8.0.1",
     "debug": "^4.3.4",
-    "eslint-plugin-etc": "^2.0.2",
-    "typescript": "^4.9.5"
+    "eslint-plugin-etc": "^2.0.3",
+    "typescript": "^5.2.2"
   }
 }

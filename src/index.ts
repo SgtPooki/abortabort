@@ -31,12 +31,31 @@ export interface AbortAbortOptions {
    * The maximum number of dependants that can fail before this instance aborts.
    */
   maximumFailedDependants?: number
+
+  /**
+   * An existing AbortSignal that you want to wrap with AbortAbort
+   */
+  signal?: AbortSignal
 }
 
 const defaultOptions: AbortAbortOptions = {
   dependants: [],
   maximumFailedDependants: Infinity
 }
+
+class AbortControllerFromSignal extends AbortController {
+  constructor (signal: AbortSignal) {
+    super()
+    if (signal.aborted) {
+      this.abort()
+      return
+    }
+    signal.addEventListener('abort', () => {
+      this.abort()
+    }, { once: true })
+  }
+}
+
 /**
  * A class that handles AbortController nesting.
  *
@@ -59,21 +78,27 @@ export default class AbortAbort {
   private readonly abortController: AbortController
 
   constructor (protected readonly options: AbortAbortOptions = defaultOptions) {
-    this.abortController = new AbortController()
+    if (options.signal != null) {
+      this.abortController = new AbortControllerFromSignal(options.signal)
+    } else {
+      this.abortController = new AbortController()
+    }
 
     if (this.options?.dependants != null && this.options.dependants.length > 0) {
       this.options.dependants.forEach((dependant) => { this.addDependant(dependant) })
     }
-    this.abortAllDependencies = this.abortAllDependencies.bind(this)
-    this.updateOnDependantAbort = this.updateOnDependantAbort.bind(this)
 
     this.signal.addEventListener('abort', this.abortAllDependencies, { once: true })
 
     if (options?.timeout != null) {
-      setTimeout(() => {
+      AbortSignal.timeout(options.timeout).addEventListener('abort', () => {
         this.abort(new Error(`${this.toString()} timeout of ${options.timeout}ms exceeded`))
-      }, options.timeout)
+      }, { once: true })
     }
+  }
+
+  static fromSignal (signal: AbortSignal, options: Partial<AbortAbortOptions> = {}): AbortAbort {
+    return new AbortAbort({ ...options, signal })
   }
 
   abort (reason: unknown = new Error('Unknown AbortAbort reason')): void {
@@ -97,7 +122,7 @@ export default class AbortAbort {
    * Abort all dependants of this instance.
    * You can call this method directly in order to keep this instance alive but abort all of its dependants.
    */
-  public abortAllDependencies (): void {
+  public abortAllDependencies = (): void => {
     trace(`${this.toString()} abortAllDependencies`)
     this._dependants.forEach((dep: AbortAbort): void => {
       if (dep.aborted) {
@@ -111,7 +136,7 @@ export default class AbortAbort {
   /**
    * @param dependant - An AbortAbort instance that will be aborted if this instance is aborted.
    */
-  public addDependant (dependant: AbortAbort): void {
+  public addDependant = (dependant: AbortAbort): void => {
     if (this.signal.aborted) {
       dependant.abort(new Error(`${dependant.toString()} could not be added as a dependency to an already aborted ${this.toString()} instance`))
       return
@@ -120,8 +145,15 @@ export default class AbortAbort {
 
     dependant.signal.addEventListener('abort', () => {
       trace(`Dependant ${dependant.toString()} aborted`)
-      this.updateOnDependantAbort(dependant)
+      this.updateOnDependentChange()
     }, { once: true })
+  }
+
+  public addParent = (parent: AbortAbort): void => {
+    parent.addDependant(this)
+    if (this.signal.aborted) {
+      parent.updateOnDependentChange()
+    }
   }
 
   get successfulDependants (): number {
@@ -136,12 +168,15 @@ export default class AbortAbort {
     return successRatio
   }
 
-  private updateOnDependantAbort (dependant: AbortAbort): void {
+  /**
+   * When a dependants of this instance change, this method is called to update the state of this parent instance.
+   */
+  private readonly updateOnDependentChange = (): void => {
     this.checkMaximumFailedDependants()
     this.checkSuccessRatioLimit()
   }
 
-  private checkMaximumFailedDependants (): void {
+  private readonly checkMaximumFailedDependants = (): void => {
     const maxFailedDeps = this.options.maximumFailedDependants
     if (maxFailedDeps == null) {
       return
@@ -152,7 +187,7 @@ export default class AbortAbort {
     }
   }
 
-  private checkSuccessRatioLimit (): void {
+  private readonly checkSuccessRatioLimit = (): void => {
     const successRatioLimit = this.options.successRatioLimit
     if (successRatioLimit == null) {
       return

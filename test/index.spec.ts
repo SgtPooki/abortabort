@@ -1,7 +1,21 @@
-import AbortAbort from '../src/index.js'
 import { expect } from 'aegir/chai'
+import AbortAbort from '../src/index.js'
 
 describe('AbortAbort', () => {
+  it('should support instantiation from a signal', () => {
+    const controller = new AbortController()
+    const abort = new AbortAbort({ signal: controller.signal })
+    controller.abort()
+    expect(abort).to.have.property('aborted', true)
+  })
+
+  it('should support instantiation from a failed signal', () => {
+    const controller = new AbortController()
+    controller.abort()
+    const abort = AbortAbort.fromSignal(controller.signal)
+    expect(abort).to.have.property('aborted', true)
+  })
+
   it('should abort all dependants', () => {
     const abort1 = new AbortAbort({ id: 'abort1' })
     const abort2 = new AbortAbort({ id: 'abort2' })
@@ -11,6 +25,32 @@ describe('AbortAbort', () => {
     expect(abort1).to.have.property('aborted', true)
     expect(abort2).to.have.property('aborted', true)
     expect(abort3).to.have.property('aborted', true)
+  })
+
+  it('should abort new dependenct if parent is already aborted', () => {
+    const abortParent = new AbortAbort()
+    abortParent.abort()
+    const abortChild = new AbortAbort()
+    abortParent.addDependant(abortChild)
+    expect(abortChild).to.have.property('aborted', true)
+  })
+
+  it('should add a Parent to an existing AbortAbort instances', () => {
+    const abortChild = new AbortAbort()
+    const abortParent = new AbortAbort()
+    abortChild.addParent(abortParent)
+    expect(abortParent.calculateSuccessRatio()).to.equal(1)
+    abortChild.abort()
+    expect(abortParent.calculateSuccessRatio()).to.equal(0)
+  })
+
+  it('should fail an AbortAbort child when adding an aborted parent', () => {
+    const abortChild = new AbortAbort()
+    const abortParent = new AbortAbort()
+    abortParent.abort()
+    abortChild.addParent(abortParent)
+    expect(abortChild).to.have.property('aborted', true)
+    expect(abortParent).to.have.property('aborted', true)
   })
 
   it('should abort if a certain timeout is reached', (done) => {
