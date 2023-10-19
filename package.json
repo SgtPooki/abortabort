@@ -55,6 +55,8 @@
     "c8": "^8.0.1",
     "debug": "^4.3.4",
     "eslint-plugin-etc": "^2.0.3",
+    "p-retry": "^6.1.0",
+    "ts-sinon": "^2.0.2",
     "typescript": "^5.2.2"
   },
   "publishConfig": {

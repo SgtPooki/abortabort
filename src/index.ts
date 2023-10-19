@@ -1,4 +1,5 @@
 import debug from 'debug'
+import { AbortControllerFromSignal } from './AbortControllerFromSignal.js'
 
 const log = debug('abortabort')
 const trace = log.extend('trace')
@@ -43,21 +44,8 @@ const defaultOptions: AbortAbortOptions = {
   maximumFailedDependants: Infinity
 }
 
-class AbortControllerFromSignal extends AbortController {
-  constructor (signal: AbortSignal) {
-    super()
-    if (signal.aborted) {
-      this.abort()
-      return
-    }
-    signal.addEventListener('abort', () => {
-      this.abort()
-    }, { once: true })
-  }
-}
-
 /**
- * A class that handles AbortController nesting.
+ * A class that handles AbortController & AbortSignal nesting.
  *
  * Features:
  * * Any dependants of an AbortAbort are aborted when it is aborted.
@@ -73,22 +61,29 @@ class AbortControllerFromSignal extends AbortController {
  * * Support configuration of successRatioLimit (only direct children? or all?)
  *
  */
-export default class AbortAbort {
+export default class AbortAbort extends EventTarget {
   private readonly _dependants: AbortAbort[] = []
-  private readonly abortController: AbortController
+  private readonly abortController: AbortController | AbortControllerFromSignal
+  public readonly id: symbol
+  #_listenerCount = 0
+
+  // TODO: support multiple parents.
+  // private readonly _parents: AbortAbort[] = []
 
   constructor (protected readonly options: AbortAbortOptions = defaultOptions) {
+    super()
     if (options.signal != null) {
       this.abortController = new AbortControllerFromSignal(options.signal)
+      this.#_listenerCount++ // listener created by AbortControllerFromSignal
     } else {
       this.abortController = new AbortController()
     }
+    this.id = Symbol(options.id ?? 'AbortAbort')
 
     if (this.options?.dependants != null && this.options.dependants.length > 0) {
       this.options.dependants.forEach((dependant) => { this.addDependant(dependant) })
     }
-
-    this.signal.addEventListener('abort', this.abortAllDependencies, { once: true })
+    this.addEventListener('abort', this.abortAllDependencies, { once: true })
 
     if (options?.timeout != null) {
       AbortSignal.timeout(options.timeout).addEventListener('abort', () => {
@@ -99,6 +94,33 @@ export default class AbortAbort {
 
   static fromSignal (signal: AbortSignal, options: Partial<AbortAbortOptions> = {}): AbortAbort {
     return new AbortAbort({ ...options, signal })
+  }
+
+  /**
+   * A replacement for https://www.npmjs.com/package/any-signal that uses AbortAbort instead.
+   * This method will set up an AbortAbort with `successRatioLimit` set to 1 so that it will abort if any of the provided signals abort.
+   */
+  static anySignal (signals: Array<AbortSignal | undefined | null | AbortAbort>, options: Partial<AbortAbortOptions> = {}): AbortAbort {
+    const validSignals = signals.filter((signal): signal is (AbortAbort | AbortSignal) => signal != null)
+    const aabort = new AbortAbort({ ...options, successRatioLimit: 1 })
+
+    validSignals.forEach((signal) => {
+      if (aabort.aborted) {
+        return
+      }
+      if (signal.aborted) {
+        aabort.abort()
+        return
+      }
+      if (signal instanceof AbortSignal) {
+        aabort.addDependant(AbortAbort.fromSignal(signal)); return
+      }
+
+      aabort.addDependant(signal)
+    })
+
+    aabort.updateOnDependentChange()
+    return aabort
   }
 
   abort (reason: unknown = new Error('Unknown AbortAbort reason')): void {
@@ -114,8 +136,41 @@ export default class AbortAbort {
     return this.abortController.signal
   }
 
+  addEventListener: AbortSignal['addEventListener'] = (...args: Parameters<AbortSignal['removeEventListener']>) => {
+    this.#_listenerCount++
+    this.signal.addEventListener(...args)
+  }
+
+  removeEventListener: AbortSignal['removeEventListener'] = (...args: Parameters<AbortSignal['removeEventListener']>) => {
+    this.#_listenerCount--
+    this.signal.removeEventListener(...args)
+  }
+
+  dispatchEvent: AbortSignal['dispatchEvent'] = (...args: Parameters<AbortSignal['dispatchEvent']>): boolean => {
+    return this.signal.dispatchEvent(...args)
+  }
+
+  get [Symbol.toStringTag] (): string {
+    return `AbortAbort(${String(this.id)})`
+  }
+
   toString (): string {
-    return this.options?.id != null ? `AbortAbort(${this.options.id})` : 'AbortAbort'
+    return `AbortAbort(${String(this.id)})`
+  }
+
+  /**
+   * Remove any event handlers on this instance, and any handlers on any dependants.
+   */
+  public clear = (): void => {
+    if (this.abortController instanceof AbortControllerFromSignal) {
+      this.abortController.clear()
+      this.#_listenerCount-- // listener removed by AbortControllerFromSignal
+    }
+    this.removeEventListener('abort', this.abortAllDependencies)
+    this._dependants.forEach((dep: AbortAbort): void => {
+      dep.removeEventListener('abort', this.dependentAbortedHandler)
+      dep.clear()
+    })
   }
 
   /**
@@ -143,10 +198,20 @@ export default class AbortAbort {
     }
     this._dependants.push(dependant)
 
-    dependant.signal.addEventListener('abort', () => {
-      trace(`Dependant ${dependant.toString()} aborted`)
-      this.updateOnDependentChange()
-    }, { once: true })
+    // dependant._parents.push(this)
+    // dependant.setParent(this)
+
+    dependant.addEventListener('abort', this.dependentAbortedHandler, { once: true })
+    // this.updateOnDependentChange() // we've added a new dependent, so we need to update our state
+  }
+
+  // private setParent (parent: AbortAbort): void {
+  //   this._parents.push(parent)
+  // }
+
+  private readonly dependentAbortedHandler = (): void => {
+    trace(`Dependant of ${this.toString()} aborted`)
+    this.updateOnDependentChange()
   }
 
   public addParent = (parent: AbortAbort): void => {
@@ -154,6 +219,19 @@ export default class AbortAbort {
     if (this.signal.aborted) {
       parent.updateOnDependentChange()
     }
+  }
+
+  get sumTotalListeners (): number {
+    return this._dependants.reduce((total, dep) => total + dep.listenerCount, this.#_listenerCount)
+  }
+
+  // TODO: remove this and #_listenerCount increments and decrements
+  get listenerCount (): number {
+    return this.#_listenerCount
+  }
+
+  get dependants (): readonly AbortAbort[] {
+    return this._dependants
   }
 
   get successfulDependants (): number {
