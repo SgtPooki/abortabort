@@ -46,6 +46,7 @@
   "scripts": {
     "build": "aegir build",
     "lint": "aegir lint",
+    "release": "aegir release",
     "test": "aegir test && npm run test:cov",
     "test:cov": "npm run build && c8 -r lcovonly mocha --require source-map-support/register --reporter=dot --timeout=10000 --bail --exit --recursive dist/test/**/*.spec.js"
   },
@@ -55,5 +56,8 @@
     "debug": "^4.3.4",
     "eslint-plugin-etc": "^2.0.3",
     "typescript": "^5.2.2"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
