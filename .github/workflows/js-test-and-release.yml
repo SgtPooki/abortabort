@@ -178,5 +178,6 @@ jobs:
       - run: npm run --if-present release
         env:
           # GITHUB_TOKEN: ${{ secrets.UCI_GITHUB_TOKEN || github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
