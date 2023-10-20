@@ -105,9 +105,6 @@ export default class AbortAbort extends EventTarget {
     const aabort = new AbortAbort({ ...options, successRatioLimit: 1 })
 
     validSignals.forEach((signal) => {
-      if (aabort.aborted) {
-        return
-      }
       if (signal.aborted) {
         aabort.abort()
         return
@@ -148,10 +145,6 @@ export default class AbortAbort extends EventTarget {
 
   dispatchEvent: AbortSignal['dispatchEvent'] = (...args: Parameters<AbortSignal['dispatchEvent']>): boolean => {
     return this.signal.dispatchEvent(...args)
-  }
-
-  get [Symbol.toStringTag] (): string {
-    return `AbortAbort(${String(this.id)})`
   }
 
   toString (): string {
