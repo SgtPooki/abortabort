@@ -230,10 +230,6 @@ export default class AbortAbort extends EventTarget {
     return this.#_listenerCount
   }
 
-  get dependants (): readonly AbortAbort[] {
-    return this._dependants
-  }
-
   get successfulDependants (): number {
     return this._dependants.filter((dependant) => !dependant.aborted).length
   }
