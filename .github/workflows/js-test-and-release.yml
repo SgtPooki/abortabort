@@ -160,6 +160,10 @@ jobs:
           flags: electron-renderer
 
   release:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     needs: [test-node, test-chrome, test-chrome-webworker, test-firefox, test-firefox-webworker, test-webkit, test-webkit-webworker, test-electron-main, test-electron-renderer]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -177,7 +181,5 @@ jobs:
           docker-username: ${{ secrets.DOCKER_USERNAME }}
       - run: npm run --if-present release
         env:
-          # GITHUB_TOKEN: ${{ secrets.UCI_GITHUB_TOKEN || github.token }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.UCI_GITHUB_TOKEN || github.token }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
