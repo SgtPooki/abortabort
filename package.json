@@ -51,7 +51,7 @@
     "test:cov": "npm run build && c8 -r lcovonly mocha --require source-map-support/register --reporter=dot --timeout=10000 --bail --exit --recursive dist/test/**/*.spec.js"
   },
   "devDependencies": {
-    "aegir": "^41.0.5",
+    "aegir": "^42.1.0",
     "c8": "^8.0.1",
     "debug": "^4.3.4",
     "eslint-plugin-etc": "^2.0.3",
