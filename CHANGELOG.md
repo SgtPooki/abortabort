@@ -1,3 +1,18 @@
+## [0.2.0](https://github.com/SgtPooki/abortabort/compare/v0.1.0...v0.2.0) (2024-03-15)
+
+
+### Features
+
+* signal-manager ([a11e94d](https://github.com/SgtPooki/abortabort/commit/a11e94d7cee9c58ebe7b69cfde620093f981f568))
+
+
+### Trivial Changes
+
+* **deps:** update actions/checkout action to v4 ([#20](https://github.com/SgtPooki/abortabort/issues/20)) ([231dd30](https://github.com/SgtPooki/abortabort/commit/231dd30c0f92b30a991d94075f975a876b09942d))
+* **deps:** update codecov/codecov-action action to v3.1.4 ([#15](https://github.com/SgtPooki/abortabort/issues/15)) ([35894c7](https://github.com/SgtPooki/abortabort/commit/35894c7721ccb8929406f6955a25cec934eac252))
+* **deps:** update codecov/codecov-action action to v3.1.6 ([#57](https://github.com/SgtPooki/abortabort/issues/57)) ([7038dd0](https://github.com/SgtPooki/abortabort/commit/7038dd05e78283f845f8bca3c285fcd15b04bf15))
+* **deps:** update npm to v10 ([#21](https://github.com/SgtPooki/abortabort/issues/21)) ([5184e8b](https://github.com/SgtPooki/abortabort/commit/5184e8b5dfcd277c183fdd1d39c68fb9360c29d8))
+
 ## [0.1.0](https://github.com/SgtPooki/abortabort/compare/v0.0.2...v0.1.0) (2023-10-20)
 
 
