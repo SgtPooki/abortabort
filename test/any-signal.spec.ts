@@ -121,7 +121,7 @@ describe('AbortAbort.anySignal', () => {
   })
 
   // it('should abort after clear', () => {})
-  it('should abort after clear', () => {
+  it('should not abort when calling abort on child after clear', () => {
     const controllers = [...new Array(5)].map(() => new AbortController())
     const signals = controllers.map((controller) => controller.signal)
     const aabortDependents = signals.map((s, i) => AbortAbort.fromSignal(s, { id: `signalChild${i}` }))
