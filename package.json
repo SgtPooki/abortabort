@@ -52,7 +52,7 @@
   },
   "devDependencies": {
     "aegir": "^41.0.5",
-    "c8": "^8.0.1",
+    "c8": "^9.0.0",
     "debug": "^4.3.4",
     "eslint-plugin-etc": "^2.0.3",
     "p-retry": "^6.1.0",
